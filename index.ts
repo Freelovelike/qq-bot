@@ -112,6 +112,61 @@ bot.on("message", async (context) => {
     if (text.startsWith("/chat ")) {
       const question = text.slice(6).trim();
       console.log("[chat] prompt =", question);
+
+      // 1. 获取当前时间（这是一个精确的、唯一的时刻）
+      const now = new Date();
+
+      // 2. 定义我们的目标时区
+      const chinaTimeZone = 'Asia/Shanghai'; // 这是 UTC+8 的标准名称
+
+      // 3. 【正确】使用 timeZone 选项来获取字符串
+      const timeString = now.toLocaleString('zh-CN', {
+        timeZone: chinaTimeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
+      const weekDay = now.toLocaleString('zh-CN', {
+        timeZone: chinaTimeZone,
+        weekday: 'long'
+      });
+
+      // 4. 【正确】获取中国时区的“小时” (作为数字)
+      //    我们单独请求 'hour'，并确保它是24小时制
+      const hourString = now.toLocaleString('zh-CN', {
+        timeZone: chinaTimeZone,
+        hour: '2-digit',
+        hour12: false
+      });
+      //    (注意: '24'点是合法的，代表第二天的 '00'点，我们把它统一)
+      const timeOfDay = parseInt(hourString.replace('24', '00'));
+
+
+      // 5. 您的状态逻辑现在可以完美运行了
+      let timeDesc = "";
+      if (timeOfDay < 6) timeDesc = "凌晨，快猝死了";
+      else if (timeOfDay < 9) timeDesc = "早八，困成狗";
+      else if (timeOfDay < 12) timeDesc = "上午，半梦半醒";
+      else if (timeOfDay < 14) timeDesc = "中午，干饭时间";
+      else if (timeOfDay < 18) timeDesc = "下午，继续摆烂"; // <-- 下午5点 (17) 会正确落在这里
+      else if (timeOfDay < 22) timeDesc = "晚上，开始夜猫子模式";
+      else timeDesc = "深夜，修仙时间";
+
+      // 系统提示词：风师傅人设（优化版）
+      const systemPrompt = `你是风师傅，19岁大学生群友，非AI。你毒舌嘴臭、嘴硬心软、游戏痴、梗百科、电子活爹、锐评爱好者、双标、对线圣手。
+
+**当前时间**：${timeString} ${weekDay}（仅作参考，不要主动提及）
+
+**语言要求**：禁用AI腔，用我/哥们自称。回答精简，2-3句话搞定，除非编程/技术问题要详细。高频用梗：完蛋了、G了、绝了、牛逼、汗流浃背、下头、抽象。短句+Emoji😎😅🤡。口头禅："不是哥们...""我的评价是...""不然呢？"
+
+**行为模式**：对线抓漏洞不骂脏话；日常抬杠锐评；技术问题认真回答，其他能短就短。
+
+**核心设定**：19岁大学生，累困但游戏必须冲。绝不主动说时间，除非被问。`;
+
       try {
         const url = 'https://api.siliconflow.cn/v1/chat/completions';
         const options = {
@@ -122,10 +177,16 @@ bot.on("message", async (context) => {
           },
           body: JSON.stringify({
             model: "moonshotai/Kimi-K2-Instruct-0905",
-            messages: [{
-              role: "user",
-              content: question
-            }]
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt
+              },
+              {
+                role: "user",
+                content: question
+              }
+            ]
           })
         };
 
